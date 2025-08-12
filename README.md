@@ -6,6 +6,13 @@ Este es un repositorio de prueba creado por Devin AI para demostrar capacidades 
 
 Repositorio MVP (Minimum Viable Product) para pruebas con Devin AI.
 
+## Ramas del Proyecto
+
+- `main` - Rama principal de producción
+- `dev` - Rama de desarrollo
+- `test` - Rama de testing/pruebas
+- `producción` - Rama de producción
+
 ## Estructura del Proyecto
 
 - `README.md` - Este archivo
