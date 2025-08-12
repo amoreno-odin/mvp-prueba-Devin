@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum EstadoAfiliado {
+  ACTIVO
+  INACTIVO
+}
+
+enum TipoLiquidacion {
+  INDIVIDUAL
+  GRUPAL
+}
+
+enum EstadoLiquidacion {
+  BORRADOR
+  CONFIRMADA
+  ANULADA
+}
+
+model Afiliado {
+  id                    Int      @id @default(autoincrement())
+  nLegajo              String   @unique @map("n_legajo")
+  tipoDoc              String   @map("tipo_doc")
+  nroDoc               String   @map("nro_doc")
+  apellido             String
+  nombres              String
+  fechaNacimiento      DateTime? @map("fecha_nacimiento")
+  email                String?
+  telefono             String?
+  domicilioCiudad      String?  @map("domicilio_ciudad")
+  domicilioProvincia   String?  @map("domicilio_provincia")
+  estado               EstadoAfiliado @default(ACTIVO)
+  creadoEn             DateTime @default(now()) @map("creado_en")
+  creadoPor            String   @map("creado_por")
+  modificadoEn         DateTime @updatedAt @map("modificado_en")
+  modificadoPor        String   @map("modificado_por")
+
+  grupoAfiliados       GrupoAfiliado[]
+  liquidacionDetalles  LiquidacionDetalle[]
+  liquidacionSnapshots LiquidacionGrupoSnapshot[]
+
+  @@unique([tipoDoc, nroDoc])
+  @@index([estado])
+  @@index([nLegajo])
+  @@map("afiliado")
+}
+
+model Grupo {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  vigente       Boolean  @default(true)
+  tipo          String?
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  creadoPor     String   @map("creado_por")
+  inactivadoEn  DateTime? @map("inactivado_en")
+  inactivadoPor String?  @map("inactivado_por")
+
+  grupoAfiliados GrupoAfiliado[]
+  liquidaciones  Liquidacion[]
+
+  @@index([vigente])
+  @@map("grupo")
+}
+
+model GrupoAfiliado {
+  grupoId    Int      @map("grupo_id")
+  afiliadoId Int      @map("afiliado_id")
+  desde      DateTime @default(now())
+  hasta      DateTime?
+
+  grupo    Grupo    @relation(fields: [grupoId], references: [id])
+  afiliado Afiliado @relation(fields: [afiliadoId], references: [id])
+
+  @@id([grupoId, afiliadoId, desde])
+  @@index([grupoId, hasta])
+  @@map("grupo_afiliado")
+}
+
+model Liquidacion {
+  id                 Int               @id @default(autoincrement())
+  periodoDesde       DateTime          @map("periodo_desde")
+  periodoHasta       DateTime          @map("periodo_hasta")
+  tipo               TipoLiquidacion
+  grupoId            Int?              @map("grupo_id")
+  grupoNombreLabel   String?           @map("grupo_nombre_label")
+  estado             EstadoLiquidacion @default(BORRADOR)
+  totalBruto         Decimal           @default(0) @map("total_bruto")
+  totalDescuentos    Decimal           @default(0) @map("total_descuentos")
+  totalNeto          Decimal           @default(0) @map("total_neto")
+  observaciones      String?
+  creadoEn           DateTime          @default(now()) @map("creado_en")
+  creadoPor          String            @map("creado_por")
+  confirmadoEn       DateTime?         @map("confirmado_en")
+  confirmadoPor      String?           @map("confirmado_por")
+  anuladoEn          DateTime?         @map("anulado_en")
+  anuladoPor         String?           @map("anulado_por")
+
+  grupo              Grupo?                     @relation(fields: [grupoId], references: [id])
+  detalles           LiquidacionDetalle[]
+  snapshots          LiquidacionGrupoSnapshot[]
+
+  @@index([periodoHasta, tipo])
+  @@map("liquidacion")
+}
+
+model LiquidacionDetalle {
+  id            Int     @id @default(autoincrement())
+  liquidacionId Int     @map("liquidacion_id")
+  afiliadoId    Int     @map("afiliado_id")
+  haberesBrutos Decimal @map("haberes_brutos")
+  descuentos    Decimal
+  neto          Decimal
+  observaciones String?
+
+  liquidacion Liquidacion @relation(fields: [liquidacionId], references: [id])
+  afiliado    Afiliado    @relation(fields: [afiliadoId], references: [id])
+
+  @@unique([liquidacionId, afiliadoId])
+  @@index([afiliadoId, liquidacionId])
+  @@map("liquidacion_detalle")
+}
+
+model LiquidacionGrupoSnapshot {
+  liquidacionId Int @map("liquidacion_id")
+  afiliadoId    Int @map("afiliado_id")
+
+  liquidacion Liquidacion @relation(fields: [liquidacionId], references: [id])
+  afiliado    Afiliado    @relation(fields: [afiliadoId], references: [id])
+
+  @@id([liquidacionId, afiliadoId])
+  @@map("liquidacion_grupo_snapshot")
+}
